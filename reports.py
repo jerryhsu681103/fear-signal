@@ -6,6 +6,7 @@
     python reports.py --kind charts --from 2023 --to 2026     # 只產出 2023–2026 綜合分數 vs 三大指數線圖
     python reports.py --kind ytd --from 2024 --to 2026        # 2024、2025、2026 每年一份逐日燈號回測
     python reports.py --kind main                              # 只產出 10 年主報告
+    python reports.py --kind daily                             # 只產出當日報告（最新資料日）
     python reports.py --kind yearly --from 2017 --to 2026     # 每個年度一個獨立 PDF（逐日回測＋線圖）
     （每次產出後，報告數據自動寫入 data/fear_signal.db，PDF 封存至 data/report_archive.db）
 
@@ -13,6 +14,7 @@
     10 年主報告      reports/fear_signal_10y_report.pdf      → docs/report.pdf
     分數 vs 指數線圖  reports/score_vs_index_<起>_<迄>.pdf     → docs/score_charts.pdf、docs/score_overview.png
     逐日燈號回測      reports/ytd_signal_<年>.pdf              → docs/ytd_<年>.pdf
+    當日報告          reports/daily/daily_report_<日期>.pdf    → docs/daily_report.pdf
 """
 from __future__ import annotations
 
@@ -24,7 +26,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent
 DOCS = ROOT / "docs"
-KINDS = ("main", "charts", "ytd")
+KINDS = ("main", "charts", "ytd", "daily")
 YEARLY_DIR = ROOT / "reports" / "yearly"
 
 
@@ -67,6 +69,9 @@ def make_reports(kinds=KINDS, y0: int | None = None, y1: int | None = None) -> d
                 pdf, png = build_score_charts.main(y0, y1, png=DOCS / "score_overview.png")
                 shutil.copy(pdf, DOCS / "score_charts.pdf")
                 out[kind] = [pdf, png]
+            elif kind == "daily":
+                import build_daily_report
+                out[kind] = [build_daily_report.main()]   # 內部已複製到 docs/daily_report.pdf
             elif kind == "yearly":
                 out[kind] = [yearly_report(y) for y in range(y0, y1 + 1)]
             elif kind == "ytd":
@@ -92,7 +97,7 @@ def make_reports(kinds=KINDS, y0: int | None = None, y1: int | None = None) -> d
 
 def main():
     ap = argparse.ArgumentParser(description="用現有資料庫產出報告")
-    ap.add_argument("--kind", default="all", help="main / charts / ytd / yearly / all，可用逗號組合，例如 charts,ytd")
+    ap.add_argument("--kind", default="all", help="main / charts / ytd / daily / yearly / all，可用逗號組合，例如 charts,ytd")
     ap.add_argument("--from", dest="y0", type=int, help="起始年（線圖與逐日回測用，預設去年）")
     ap.add_argument("--to", dest="y1", type=int, help="結束年（預設今年）")
     a = ap.parse_args()

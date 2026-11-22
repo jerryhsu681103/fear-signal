@@ -22,6 +22,7 @@
 - Repo：https://github.com/jerryhsu681103/fear-signal
 - 排程：每個美股交易日收盤後自動執行（台北時間 週二～週六 06:37），也可在 **Actions → daily-fear-signal → Run workflow** 手動執行。
 - 每天提交：資料庫（`data/`）、燈號網頁（`docs/index.html`）、線圖預覽（`docs/score_overview.png`）。
+- 每天：另外提交當日報告 `docs/daily_report.pdf`（已壓縮，約 0.4 MB）。
 - 每週五或手動執行：另外提交所有 PDF 報告（`docs/*.pdf`、`reports/`）並更新今年度獨立報告，避免每天提交數 MB 的 PDF 讓 repo 過度膨脹。
 - 網頁：Settings → Pages 設定 Branch `main`、資料夾 `/docs` 後，網址為 https://jerryhsu681103.github.io/fear-signal/
 
@@ -75,6 +76,7 @@
 每天自動更新時會一併產出（也可隨時手動產出）：
 | 報告 | 指令 | 網頁下載檔名 |
 |---|---|---|
+| 當日報告（今日燈號、8 項指標、三大指數、進場計畫、事件、近 6 個月走勢、近 10 日紀錄；2–3 頁） | `python reports.py --kind daily`；指定日期 `python build_daily_report.py 2026-03-27` | `docs/daily_report.pdf`（封存 `reports/daily/`，保留近 30 份） |
 | 10 年主報告 | `python reports.py --kind main` | `docs/report.pdf` |
 | 綜合分數 vs 三大指數線圖 | `python reports.py --kind charts --from 2025 --to 2026` | `docs/score_charts.pdf`、`docs/score_overview.png` |
 | 逐日燈號回測（每年一份） | `python reports.py --kind ytd --from 2025 --to 2026` | `docs/ytd_2025.pdf`、`docs/ytd_2026.pdf` |

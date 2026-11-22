@@ -966,6 +966,7 @@ ul{{padding-left:18px}}th.grp{{text-align:center;border-bottom:1px solid var(--i
  onerror="this.parentNode.style.display='none'"></div>
 <h2>報告下載</h2>
 <div class="card"><ul>
+<li><a href="daily_report.pdf">🗓️ 當日報告 PDF</a>（今日燈號、指標、進場計畫、事件、近 10 日紀錄）</li>
 <li><a href="report.pdf">📄 10 年資料庫完整報告</a>（燈號回測、各指標分組、總經指標、紅燈）</li>
 <li><a href="score_charts.pdf">📈 綜合分數 vs 納指100／S&amp;P 500／費城半導體 線圖</a></li>
 <li><a href="ytd_{df.index[-1].year}.pdf">📅 {df.index[-1].year} 年每日燈號回測</a>｜<a href="ytd_{df.index[-1].year - 1}.pdf">{df.index[-1].year - 1} 年</a></li>
@@ -998,8 +999,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--years", type=int, default=10)
     ap.add_argument("--no-pdf", action="store_true", help="不產生任何 PDF 報告")
-    ap.add_argument("--reports", default="main,charts,ytd",
-                    help="要產出的報告：main（10 年主報告）、charts（綜合分數 vs 三大指數線圖）、ytd（逐日燈號回測），逗號分隔")
+    ap.add_argument("--reports", default="daily,main,charts,ytd",
+                    help="要產出的報告：daily（當日報告）、main（10 年主報告）、charts（綜合分數 vs 三大指數線圖）、ytd（逐日燈號回測），逗號分隔")
     ap.add_argument("--chart-from", type=int, help="線圖／逐日回測起始年（預設去年）")
     a = ap.parse_args()
 

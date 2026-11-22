@@ -23,7 +23,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: 安裝中文字型（PDF 與線圖）
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk qpdf
       - run: pip install -r requirements.txt
       - name: 更新資料庫、燈號、網頁與報告
         env:
@@ -38,8 +38,8 @@ jobs:
         run: |
           git config user.name "fear-signal-bot"
           git config user.email "actions@users.noreply.github.com"
-          # 每天：資料庫、燈號、網頁（體積小）
-          git add data docs/index.html docs/score_overview.png
+          # 每天：資料庫、燈號、網頁、當日報告
+          git add data docs/index.html docs/score_overview.png docs/daily_report.pdf
           # 週五或手動執行：連同 PDF 報告一起提交（避免每天提交數 MB 的 PDF 讓 repo 過度膨脹）
           if [ "$(date -u +%u)" = "5" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             git add docs reports

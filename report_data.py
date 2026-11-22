@@ -174,7 +174,7 @@ def catalog_and_archive(files: list[Path]) -> pd.DataFrame:
                 continue
             b = f.read_bytes()
             name = f.name
-            kind = ("yearly" if "年度燈號回測報告" in name else "ytd" if name.startswith("ytd_") else
+            kind = ("daily" if name.startswith("daily_report") else "yearly" if "年度燈號回測報告" in name else "ytd" if name.startswith("ytd_") else
                     "charts" if name.startswith("score_vs_index") else "main" if name.startswith("fear_signal_10y") else "other")
             period = "".join(ch for ch in name if ch.isdigit() or ch == "_").strip("_").replace("_", "-") or "10年"
             pages = len(PdfReader(f).pages)
@@ -192,7 +192,7 @@ def report_files() -> list[Path]:
     y_now = pd.Timestamp.today().year
     keep = [f for f in sorted(rep.glob("*.pdf"))
             if not f.name.startswith("ytd_signal_") or int(f.stem[-4:]) >= y_now - 1]
-    return keep + sorted((rep / "yearly").glob("*.pdf"))
+    return keep + sorted((rep / "yearly").glob("*.pdf")) + sorted((rep / "daily").glob("*.pdf"))[-1:]
 
 
 def save_to_db(files: list[Path] | None = None, archive: bool = True) -> dict:
