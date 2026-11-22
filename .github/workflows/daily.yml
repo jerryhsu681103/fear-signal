@@ -2,30 +2,47 @@ name: daily-fear-signal
 
 on:
   schedule:
-    - cron: "37 22 * * 1-5"   # 每個美股交易日收盤後 (台北時間 週二～週六 06:37)
+    - cron: "37 22 * * 1-5"   # 每個美股交易日收盤後（台北時間 週二～週六 06:37）
   workflow_dispatch:          # 可在 Actions 頁面手動執行
 
 permissions:
   contents: write
 
+concurrency:
+  group: daily-fear-signal
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
+      - name: 安裝中文字型（PDF 與線圖）
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk
       - run: pip install -r requirements.txt
-      - name: 更新資料庫與燈號
+      - name: 更新資料庫、燈號、網頁與報告
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python fear_signal.py
+      - name: 週五（美股週收盤）或手動執行時，更新今年度獨立報告
+        run: |
+          if [ "$(date -u +%u)" = "5" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            python reports.py --kind yearly --from $(date -u +%Y) --to $(date -u +%Y)
+          fi
       - name: 提交更新
         run: |
           git config user.name "fear-signal-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data docs
+          # 每天：資料庫、燈號、網頁（體積小）
+          git add data docs/index.html docs/score_overview.png
+          # 週五或手動執行：連同 PDF 報告一起提交（避免每天提交數 MB 的 PDF 讓 repo 過度膨脹）
+          if [ "$(date -u +%u)" = "5" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            git add docs reports
+          fi
           git diff --cached --quiet || git commit -m "daily update $(date -u +%F)"
           git push
