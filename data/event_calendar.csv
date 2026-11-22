@@ -1,0 +1,113 @@
+# 重大事件行事曆：進場日若落在高重要度事件「前一個交易日」，改在事件當日收盤（結果公布後）執行。
+# importance: 高 = 延後進場；中 = 僅提示。type: FOMC / CPI / NFP / PPI / HOLIDAY / POLICY（可自行加入政策事件）
+# FOMC 為利率決議公布日（會議第二天，美東 14:00）；CPI、NFP 為美東 08:30（開盤前）公布。
+date,type,event,importance,source
+2016-01-27,FOMC,FOMC 利率決議,高,federalreserve.gov
+2016-03-16,FOMC,FOMC 利率決議,高,federalreserve.gov
+2016-04-27,FOMC,FOMC 利率決議,高,federalreserve.gov
+2016-06-15,FOMC,FOMC 利率決議,高,federalreserve.gov
+2016-07-27,FOMC,FOMC 利率決議,高,federalreserve.gov
+2016-09-21,FOMC,FOMC 利率決議,高,federalreserve.gov
+2016-11-02,FOMC,FOMC 利率決議,高,federalreserve.gov
+2016-12-14,FOMC,FOMC 利率決議,高,federalreserve.gov
+2017-02-01,FOMC,FOMC 利率決議,高,federalreserve.gov
+2017-03-15,FOMC,FOMC 利率決議,高,federalreserve.gov
+2017-05-03,FOMC,FOMC 利率決議,高,federalreserve.gov
+2017-06-14,FOMC,FOMC 利率決議,高,federalreserve.gov
+2017-07-26,FOMC,FOMC 利率決議,高,federalreserve.gov
+2017-09-20,FOMC,FOMC 利率決議,高,federalreserve.gov
+2017-11-01,FOMC,FOMC 利率決議,高,federalreserve.gov
+2017-12-13,FOMC,FOMC 利率決議,高,federalreserve.gov
+2018-01-31,FOMC,FOMC 利率決議,高,federalreserve.gov
+2018-03-21,FOMC,FOMC 利率決議,高,federalreserve.gov
+2018-05-02,FOMC,FOMC 利率決議,高,federalreserve.gov
+2018-06-13,FOMC,FOMC 利率決議,高,federalreserve.gov
+2018-08-01,FOMC,FOMC 利率決議,高,federalreserve.gov
+2018-09-26,FOMC,FOMC 利率決議,高,federalreserve.gov
+2018-11-08,FOMC,FOMC 利率決議,高,federalreserve.gov
+2018-12-19,FOMC,FOMC 利率決議,高,federalreserve.gov
+2019-01-30,FOMC,FOMC 利率決議,高,federalreserve.gov
+2019-03-20,FOMC,FOMC 利率決議,高,federalreserve.gov
+2019-05-01,FOMC,FOMC 利率決議,高,federalreserve.gov
+2019-06-19,FOMC,FOMC 利率決議,高,federalreserve.gov
+2019-07-31,FOMC,FOMC 利率決議,高,federalreserve.gov
+2019-09-18,FOMC,FOMC 利率決議,高,federalreserve.gov
+2019-10-30,FOMC,FOMC 利率決議,高,federalreserve.gov
+2019-12-11,FOMC,FOMC 利率決議,高,federalreserve.gov
+2020-01-29,FOMC,FOMC 利率決議,高,federalreserve.gov
+2020-03-03,FOMC,FOMC 緊急降息（臨時會議）,高,federalreserve.gov
+2020-03-16,FOMC,FOMC 緊急降息（3/15 週日臨時會議）,高,federalreserve.gov
+2020-04-29,FOMC,FOMC 利率決議,高,federalreserve.gov
+2020-06-10,FOMC,FOMC 利率決議,高,federalreserve.gov
+2020-07-29,FOMC,FOMC 利率決議,高,federalreserve.gov
+2020-09-16,FOMC,FOMC 利率決議,高,federalreserve.gov
+2020-11-05,FOMC,FOMC 利率決議,高,federalreserve.gov
+2020-12-16,FOMC,FOMC 利率決議,高,federalreserve.gov
+2021-01-27,FOMC,FOMC 利率決議,高,federalreserve.gov
+2021-03-17,FOMC,FOMC 利率決議,高,federalreserve.gov
+2021-04-28,FOMC,FOMC 利率決議,高,federalreserve.gov
+2021-06-16,FOMC,FOMC 利率決議,高,federalreserve.gov
+2021-07-28,FOMC,FOMC 利率決議,高,federalreserve.gov
+2021-09-22,FOMC,FOMC 利率決議,高,federalreserve.gov
+2021-11-03,FOMC,FOMC 利率決議,高,federalreserve.gov
+2021-12-15,FOMC,FOMC 利率決議,高,federalreserve.gov
+2022-01-26,FOMC,FOMC 利率決議,高,federalreserve.gov
+2022-03-16,FOMC,FOMC 利率決議,高,federalreserve.gov
+2022-05-04,FOMC,FOMC 利率決議,高,federalreserve.gov
+2022-06-15,FOMC,FOMC 利率決議,高,federalreserve.gov
+2022-07-27,FOMC,FOMC 利率決議,高,federalreserve.gov
+2022-09-21,FOMC,FOMC 利率決議,高,federalreserve.gov
+2022-11-02,FOMC,FOMC 利率決議,高,federalreserve.gov
+2022-12-14,FOMC,FOMC 利率決議,高,federalreserve.gov
+2023-02-01,FOMC,FOMC 利率決議,高,federalreserve.gov
+2023-03-22,FOMC,FOMC 利率決議,高,federalreserve.gov
+2023-05-03,FOMC,FOMC 利率決議,高,federalreserve.gov
+2023-06-14,FOMC,FOMC 利率決議,高,federalreserve.gov
+2023-07-26,FOMC,FOMC 利率決議,高,federalreserve.gov
+2023-09-20,FOMC,FOMC 利率決議,高,federalreserve.gov
+2023-11-01,FOMC,FOMC 利率決議,高,federalreserve.gov
+2023-12-13,FOMC,FOMC 利率決議,高,federalreserve.gov
+2024-01-31,FOMC,FOMC 利率決議,高,federalreserve.gov
+2024-03-20,FOMC,FOMC 利率決議,高,federalreserve.gov
+2024-05-01,FOMC,FOMC 利率決議,高,federalreserve.gov
+2024-06-12,FOMC,FOMC 利率決議,高,federalreserve.gov
+2024-07-31,FOMC,FOMC 利率決議,高,federalreserve.gov
+2024-09-18,FOMC,FOMC 利率決議,高,federalreserve.gov
+2024-11-07,FOMC,FOMC 利率決議,高,federalreserve.gov
+2024-12-18,FOMC,FOMC 利率決議,高,federalreserve.gov
+2025-01-29,FOMC,FOMC 利率決議,高,federalreserve.gov
+2025-03-19,FOMC,FOMC 利率決議,高,federalreserve.gov
+2025-05-07,FOMC,FOMC 利率決議,高,federalreserve.gov
+2025-06-18,FOMC,FOMC 利率決議,高,federalreserve.gov
+2025-07-30,FOMC,FOMC 利率決議,高,federalreserve.gov
+2025-09-17,FOMC,FOMC 利率決議,高,federalreserve.gov
+2025-10-29,FOMC,FOMC 利率決議,高,federalreserve.gov
+2025-12-10,FOMC,FOMC 利率決議,高,federalreserve.gov
+2026-01-28,FOMC,FOMC 利率決議,高,federalreserve.gov
+2026-03-18,FOMC,FOMC 利率決議（含經濟預測 SEP）,高,federalreserve.gov
+2026-04-29,FOMC,FOMC 利率決議,高,federalreserve.gov
+2026-06-17,FOMC,FOMC 利率決議（含 SEP）,高,federalreserve.gov
+2026-07-29,FOMC,FOMC 利率決議,高,federalreserve.gov
+2026-09-16,FOMC,FOMC 利率決議（含 SEP）,高,federalreserve.gov
+2026-10-28,FOMC,FOMC 利率決議,高,federalreserve.gov
+2026-11-26,HOLIDAY,感恩節 美股休市,中,NYSE
+2026-11-27,HOLIDAY,感恩節翌日 美股提前收盤,中,NYSE
+2026-12-01,JOLTS,職缺報告 JOLTS（10 月）,中,bls.gov
+2026-12-04,NFP,非農就業報告（11 月）,高,bls.gov
+2026-12-09,FOMC,FOMC 利率決議（含 SEP）,高,federalreserve.gov
+2026-12-10,CPI,消費者物價指數 CPI（11 月）,高,bls.gov
+2026-12-15,PPI,生產者物價指數 PPI（11 月）,中,bls.gov
+2026-12-25,HOLIDAY,聖誕節 美股休市,中,NYSE
+2027-01-01,HOLIDAY,元旦 美股休市,中,NYSE
+2027-01-08,NFP,非農就業報告（12 月）,高,bls.gov
+2027-01-13,CPI,消費者物價指數 CPI（12 月）,高,bls.gov
+2027-01-14,PPI,生產者物價指數 PPI（12 月）,中,bls.gov
+2027-01-18,HOLIDAY,馬丁路德金紀念日 美股休市,中,NYSE
+2027-01-27,FOMC,FOMC 利率決議（暫定）,高,federalreserve.gov
+2027-03-17,FOMC,FOMC 利率決議（暫定）,高,federalreserve.gov
+2027-04-28,FOMC,FOMC 利率決議（暫定）,高,federalreserve.gov
+2027-06-09,FOMC,FOMC 利率決議（暫定）,高,federalreserve.gov
+2027-07-28,FOMC,FOMC 利率決議（暫定）,高,federalreserve.gov
+2027-09-15,FOMC,FOMC 利率決議（暫定）,高,federalreserve.gov
+2027-10-27,FOMC,FOMC 利率決議（暫定）,高,federalreserve.gov
+2027-11-17,FOMC,FOMC 利率決議（暫定）,高,federalreserve.gov

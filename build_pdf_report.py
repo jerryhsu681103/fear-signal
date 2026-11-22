@@ -341,6 +341,32 @@ def main(out_dir: Path | None = None) -> Path | None:
             + sec('6-8 10 年實質利率', '10年實質利率', note='≥2.5% 的樣本僅 5 天，無統計意義；實質利率在回測中不是有效的進出場訊號，作為估值背景參考。'))
     else:
         macro_sec = ""
+    entry_sec = ""
+    if "進場時點比較" in tables:
+        ev = (_sig.get("events") or [])
+        et = tables["重大事件波動"]
+        ent = _sig.get("entry") or {}
+        entry_sec = (
+            '<div class="pg"></div><h2>九、進場時點與重大事件</h2>'
+            f'<div class="hero" style="display:block"><div class="big" style="font-size:13pt">'
+            f'規則：綠燈第一天先等待 → 綜合分數自（綠燈後的）最高點回落 ≥ {fs.TURN_DROP:.0f} 分才發出第 1 批；'
+            f'再度轉綠並創新高、又回落 ≥ {fs.TURN_DROP:.0f} 分 → 下一批（最多 {fs.MAX_TRANCHES} 批）。'
+            '進場訊號日的下一個交易日若有 FOMC／CPI／非農，改在事件公布當日收盤執行。</div>'
+            f'<div><b>目前狀態：</b>{(_sig.get("advice") or {}).get("headline", "—")}'
+            + (f"（近半年已發出：{'、'.join(ent.get('recent_buys') or [])}）" if ent.get("recent_buys") else "") + '</div></div>'
+            + sec('9-1 進場時點比較（舊規則 vs 新規則）', '進場時點比較',
+                  note='「事件」= 獨立進場段數。新規則第 1 批的 1 個月勝率明顯高於綠燈首日，主要來自避開綠燈後的續跌，而非取得更低的價格。')
+            + '<h3>9-2 重大事件：FOMC 利率決議日的波動</h3><table class="full"><tr><th class="l">情境</th><th>FOMC 決議日</th>'
+              '<th>決議日 S&amp;P 平均漲跌幅（絕對值）</th><th>一般交易日</th><th>倍數</th></tr>'
+            + "".join(f"<tr><td class='l'>{i}</td><td>{int(r['FOMC 決議日天數'])}</td><td>{r['FOMC 決議日平均波動']*100:.2f}%</td>"
+                      f"<td>{r['一般交易日平均波動']*100:.2f}%</td><td class='b'>{r['倍數']:.2f}×</td></tr>" for i, r in et.iterrows())
+            + '</table><p class="n">恐慌越高，決議日波動越大（綜合分數 ≥80 時約為一般日的 1.9 倍）。等待結果公布後再進場，可避免單日事件風險；'
+              '回測顯示對 1 個月報酬的改善有限（約 +0.3 個百分點），主要價值在降低波動。</p>'
+            + '<h3>9-3 未來 45 天重大事件</h3><table class="full"><tr><th class="l">日期</th><th class="l">事件</th><th class="l">重要度</th>'
+              '<th class="l">進場訊號若落在前一個交易日</th></tr>'
+            + "".join(f"<tr><td class='l'>{e['date']}</td><td class='l'>{e['event']}</td><td class='l'>{e['importance']}</td>"
+                      f"<td class='l'>{'改在 ' + e['date'][5:] + ' 收盤（公布後）執行' if e['importance'] == '高' else '—'}</td></tr>" for e in ev)
+            + '</table><p class="n">事件行事曆：data/event_calendar.csv（FOMC 來源 federalreserve.gov；CPI／非農來源 bls.gov）。可自行加入政策事件（type = POLICY）。</p>')
     red_sec = ""
     if "過熱訊號拆解" in tables:
         rt = tables["燈號回測"]
@@ -458,6 +484,7 @@ th.hz{{color:#0b0b0b;font-weight:700}}table.full:not(.mon){{page-break-inside:av
 {y_table}
 <div style="page-break-inside:avoid"><h3>10 年燈號日曆（每格一個交易日；綠 = 綠燈、黃 = 黃燈、灰 = 灰燈、紅／深紅 = 過熱）</h3>
 {y_cal}</div>
+{entry_sec}
 <div class="pg"></div><h2>附錄：月度資料庫（{df.index[0]:%Y-%m} ～ {df.index[-1]:%Y-%m}）</h2>
 <p class="n">反白 = 當月曾亮綠燈。指數欄為當月價格漲跌幅；HY = 高收益債利差（%）、倒掛天 = 當月 VIX÷VIX3M 大於 1 的天數。完整每日資料（{len(df):,} 筆）見 data/fear_signal.db 與 daily.csv。</p>
 {monthly_table(df)}

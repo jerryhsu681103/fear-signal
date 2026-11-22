@@ -23,12 +23,22 @@ SHORT = {"GREEN": "綠", "YELLOW": "黃", "NEUTRAL": "灰", "RED": "紅", "RED2"
 
 
 def action(r) -> str:
+    """建議動作（依新進場規則：綠燈先等待，分數自高點回落 ≥5 才進場）。"""
+    import fear_signal as _fs
     L, c = r["light"], int(r["conf"]) if pd.notna(r["conf"]) else 0
-    if L == "GREEN":
-        d = fs.DEPLOY["conf>=2" if c >= 2 else "conf=1" if c == 1 else "conf<=0"]
-        return f"動用機會資金 {d:.0%}"
-    return {"YELLOW": "等待綠燈", "NEUTRAL": "維持配置", "RED": "停止加碼・減高 beta 1/3",
-            "RED2": "再減碼 1/3"}.get(L, "—")
+    tr, ph = int(r.get("entry_tranche", 0) or 0), r.get("entry_phase", "NONE")
+    if tr:
+        if tr == 1:
+            d = _fs.DEPLOY["conf>=2" if c >= 2 else "conf=1" if c == 1 else "conf<=0"]
+            return f"第 1 批進場 {d:.0%}"
+        return f"第 {tr} 批進場 1/3"
+    if L in ("RED", "RED2"):
+        return {"RED": "停止加碼・減高 beta 1/3", "RED2": "再減碼 1/3"}[L]
+    if ph == "WAIT":
+        return "綠燈・等待轉折" if L == "GREEN" else "追蹤中・等待轉折"
+    if ph == "HOLD":
+        return "已進場・等待再轉綠"
+    return {"YELLOW": "等待綠燈", "NEUTRAL": "維持配置"}.get(L, "—")
 
 
 def stat_block(df, mask_name_pairs):
@@ -73,21 +83,35 @@ def episodes(df, full) -> str:
     rows = []
     for _, e in sig.groupby(brk):
         f = e.iloc[0]
-        staged = {k: last[k] / (len(e) / (1 / e[k]).sum()) - 1 for k in IDX}
+        # 新規則：本段（含最後綠燈後 EPISODE_TAIL 日）內實際發出的進場訊號日
+        i1 = full.index.get_loc(e.index[-1])
+        win = full.iloc[full.index.get_loc(e.index[0]): i1 + fs.EPISODE_TAIL + 1]
+        buys = win[win["entry_tranche"] > 0] if f.light == "GREEN" and "entry_tranche" in win else win.iloc[0:0]
+        if len(buys):
+            b1 = buys.iloc[0]
+            rule_cell = (f"<td class='l'>{buys.index[0]:%m-%d}（{len(buys)} 批）</td>"
+                         + "".join(f"<td class='{cls(b1[f'spx_fwd{h}'])}'>{p(b1[f'spx_fwd{h}'])}</td>" for h in HZ)
+                         + "".join(f"<td class='{cls(v)} b'>{p(v)}</td>" for v in
+                                   (last[k] / (len(buys) / (1 / buys[k]).sum()) - 1 for k in IDX)))
+        else:
+            rule_cell = "<td class='l'>—</td>" + "<td>—</td>" * (len(HZ) + len(IDX))
         rows.append(
             f"<tr><td class='l'>{SHORT[f.light]}</td><td class='l'>{e.index[0]:%m-%d}</td><td class='l'>{e.index[-1]:%m-%d}</td>"
-            f"<td>{len(e)}</td><td>{int(f.conf):+d}</td><td class='l'>{action(f)}</td>"
+            f"<td>{len(e)}</td><td>{int(f.conf):+d}</td>"
             f"<td>{'—' if pd.isna(f.fg) else f'{f.fg:.0f}'}</td><td>{f.vix:.1f}</td>"
             + "".join(f"<td class='{cls(f[f'spx_fwd{h}'])}'>{p(f[f'spx_fwd{h}'])}</td>" for h in HZ)
-            + "".join(f"<td class='{cls(last[k]/f[k]-1)} b'>{p(last[k]/f[k]-1)}</td>" for k in IDX)
-            + "".join(f"<td class='{cls(v)}'>{p(v)}</td>" for v in staged.values()) + "</tr>")
+            + "".join(f"<td class='{cls(last[k]/f[k]-1)}'>{p(last[k]/f[k]-1)}</td>" for k in IDX)
+            + rule_cell + "</tr>")
     head = ("<tr><th class='l' rowspan='2'>燈號</th><th class='l' rowspan='2'>首日</th><th class='l' rowspan='2'>末日</th>"
-            "<th rowspan='2'>天數</th><th rowspan='2'>首日<br>確認分數</th><th class='l' rowspan='2'>首日建議</th>"
+            "<th rowspan='2'>天數</th><th rowspan='2'>首日<br>確認分數</th>"
             "<th rowspan='2'>F&amp;G</th><th rowspan='2'>VIX</th>"
-            "<th colspan='3' class='grp'>首日買進 S&amp;P 持有</th><th colspan='3' class='grp'>首日買進至最新收盤</th>"
-            "<th colspan='3' class='grp'>該段每個燈號日分批買進至最新收盤</th></tr><tr>"
+            "<th colspan='3' class='grp'>舊規則：首日買進 S&amp;P 持有</th><th colspan='3' class='grp'>舊規則：首日買進至最新</th>"
+            "<th class='l' rowspan='2'>新規則<br>第 1 批日</th><th colspan='3' class='grp'>新規則：第 1 批 S&amp;P 持有</th>"
+            "<th colspan='3' class='grp'>新規則：各批平均成本至最新</th></tr><tr>"
             + "".join(f"<th>{hz}</th>" for _, hz in HZ.values())
-            + "".join(f"<th>{n}</th>" for n in ("S&amp;P", "納指", "半導體")) * 2 + "</tr>")
+            + "".join(f"<th>{n}</th>" for n in ("S&amp;P", "納指", "半導體"))
+            + "".join(f"<th>{hz}</th>" for _, hz in HZ.values())
+            + "".join(f"<th>{n}</th>" for n in ("S&amp;P", "納指", "半導體")) + "</tr>")
     return f"<table class='full'><thead>{head}</thead>{''.join(rows)}</table>"
 
 
@@ -159,6 +183,17 @@ def main(year: int | None = None):
         txt += f"；該段每個綠燈日分批買進至 {full.index[-1]:%Y/%m/%d}：S&amp;P {p(staged)}。</li>"
         bullets.append(txt)
     early_dip = [e for e in eps if e["spx_fwd2w"].dropna().min() < -0.02] if eps else []
+    buys = df[df["entry_tranche"] > 0] if "entry_tranche" in df else df.iloc[0:0]
+    firsts = [e.iloc[0] for e in eps]
+    rule_note = ""
+    if len(buys):
+        o1 = pd.Series([f["spx_fwd1m"] for f in firsts]).dropna()
+        n1 = buys["spx_fwd1m"].dropna()
+        lst = "、".join(f"{d:%m/%d} 第 {int(r.entry_tranche)} 批（1 個月 {p(r.spx_fwd1m) if pd.notna(r.spx_fwd1m) else '未滿期'}）"
+                       for d, r in buys.iterrows())
+        rule_note = (f"<li><b>進場時點（新規則）：</b>綠燈第一天先等待、分數自高點回落 ≥{fs.TURN_DROP:.0f} 分才進場。本年度進場訊號：{lst}。"
+                     + (f"所有進場訊號日 1 個月後 S&amp;P 平均 {p(n1.mean())}，舊規則（各段綠燈首日）{p(o1.mean())}。" if len(n1) and len(o1) else "")
+                     + "</li>")
     if len(g):
         green_all = (f"<li><b>綠燈整體：</b>{year} 年 {cnt.get('GREEN', 0)} 個綠燈日（{ep_txt}）。"
                      + (f"已滿 1 個月的 {len(g1m)} 天，S&amp;P 1 個月平均 {p(g1m.mean())}、上漲 {(g1m > 0).mean()*100:.0f}%；"
@@ -243,6 +278,7 @@ th{{color:#52514e;font-weight:600;background:#fafaf8}}th.grp{{text-align:center}
 <li style="display:none"><b>綠燈整體：</b>{year} 年 {cnt.get('GREEN', 0)} 個綠燈日（{ep_txt}）。已滿 1 個月的 {len(g1m)} 天，S&amp;P 1 個月平均 {p(g1m.mean()) if len(g1m) else '—'}、上漲 {((g1m > 0).mean()*100 if len(g1m) else 0):.0f}%；
 本年度全部交易日為 {p(df['spx_fwd1m'].mean())}／{(df['spx_fwd1m'].dropna() > 0).mean()*100:.0f}%。</li>
 {''.join(bullets)}
+{rule_note}
 {('<li><b>一次買 vs 分批：</b>' + '；'.join(f"{e.index[0]:%m/%d} 起的綠燈初期 2 週內最多再跌 {p(e['spx_fwd2w'].dropna().min())}，首日一次買進至 {full.index[-1]:%Y/%m/%d} S&amp;P {p(full.iloc[-1]['spx']/e.iloc[0]['spx']-1)}、分批 {p(full.iloc[-1]['spx']/(len(e)/(1/e['spx']).sum())-1)}" for e in early_dip) + '。</li>') if early_dip else ''}
 <li><b>黃燈：</b>{cnt.get('YELLOW', 0)} 天，1 個月平均 {p(y1)}（全部交易日 {p(b1)}），{y_cmp}；規則上不動用資金。</li>
 {conf_note}

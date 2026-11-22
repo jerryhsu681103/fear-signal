@@ -38,18 +38,30 @@ def load_daily() -> pd.DataFrame:
 
 
 def action(r) -> str:
+    """建議動作（依新進場規則：綠燈先等待，分數自高點回落 ≥5 才進場）。"""
+    import fear_signal as _fs
     L, c = r["light"], int(r["conf"]) if pd.notna(r["conf"]) else 0
-    if L == "GREEN":
-        d = fs.DEPLOY["conf>=2" if c >= 2 else "conf=1" if c == 1 else "conf<=0"]
-        return f"動用機會資金 {d:.0%}"
-    return {"YELLOW": "等待綠燈", "NEUTRAL": "維持配置", "RED": "停止加碼・減高 beta 1/3",
-            "RED2": "再減碼 1/3"}.get(L, "—")
+    tr, ph = int(r.get("entry_tranche", 0) or 0), r.get("entry_phase", "NONE")
+    if tr:
+        if tr == 1:
+            d = _fs.DEPLOY["conf>=2" if c >= 2 else "conf=1" if c == 1 else "conf<=0"]
+            return f"第 1 批進場 {d:.0%}"
+        return f"第 {tr} 批進場 1/3"
+    if L in ("RED", "RED2"):
+        return {"RED": "停止加碼・減高 beta 1/3", "RED2": "再減碼 1/3"}[L]
+    if ph == "WAIT":
+        return "綠燈・等待轉折" if L == "GREEN" else "追蹤中・等待轉折"
+    if ph == "HOLD":
+        return "已進場・等待再轉綠"
+    return {"YELLOW": "等待綠燈", "NEUTRAL": "維持配置"}.get(L, "—")
 
 
 def daily_actions(df: pd.DataFrame) -> pd.DataFrame:
     out = pd.DataFrame({
         "year": df.index.year, "light": df["light"], "light_zh": df["light"].map(fs.LIGHT_ZH),
         "panic_score": df["panic_score"].round(1), "conf": df["conf"],
+        "entry_phase": df.get("entry_phase"), "entry_tranche": df.get("entry_tranche"),
+        "entry_peak": df.get("entry_peak"), "entry_need": df.get("entry_need"),
         "action": df.apply(action, axis=1)})
     for k in IDX:
         out[f"{k}_close"] = df[k].round(2)
@@ -105,6 +117,16 @@ def signal_episodes(df: pd.DataFrame) -> pd.DataFrame:
                "hy": f.get("hy"), "panic_score": f.panic_score,
                "fg_extreme": e["fg"].min() if f.light == "GREEN" else e["fg"].max(),
                "vix_extreme": e["vix"].max() if f.light == "GREEN" else e["vix"].min()}
+        i1 = df.index.get_loc(e.index[-1])
+        win = df.iloc[df.index.get_loc(e.index[0]): i1 + fs.EPISODE_TAIL + 1]
+        buys = win[win["entry_tranche"] > 0] if row["type"] == "GREEN" and "entry_tranche" in win else win.iloc[0:0]
+        row["rule_first_buy"] = f"{buys.index[0]:%Y-%m-%d}" if len(buys) else None
+        row["rule_buys"] = len(buys)
+        if len(buys):
+            row["rule_spx_fwd1m"] = buys.iloc[0]["spx_fwd1m"]
+            row["rule_spx_fwd3m"] = buys.iloc[0]["spx_fwd3m"]
+            for k in IDX:
+                row[f"{k}_rule_cost_to_latest"] = last[k] / (len(buys) / (1 / buys[k]).sum()) - 1
         for k in IDX:
             for h in HZ:
                 row[f"{k}_fwd{h}"] = f[f"{k}_fwd{h}"]

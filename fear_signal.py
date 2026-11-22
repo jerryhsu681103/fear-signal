@@ -75,6 +75,12 @@ TS_EXTREME, HY_CRISIS_LVL, HY_CRISIS_5D, RR_HEADWIND = 1.10, 4.5, 0.5, 2.5
 # 過熱紅燈（退場警示）：F&G ≥ 75 且（VIX < 15 或 高收益債利差在一年內的百分位 ≤ 20，即信用面過度樂觀）
 #   深紅（強烈警示）：再加上 F&G ≥ 75 連續 ≥ 10 日，或 F&G ≥ 85
 RED_FG, RED_VIX, RED_HY_PCT, RED_STREAK, RED_FG_EXTREME = 75, 15, 20, 10, 85
+# 進場時點：綠燈第一天先等待，綜合分數自（綠燈後的）最高點回落 ≥ TURN_DROP 分，才發出第 1 批進場訊號
+#   之後須「再度出現綠燈並創新高 → 再回落 ≥ TURN_DROP」才發出下一批，每段最多 MAX_TRANCHES 批
+#   段落結束：最後一個綠燈日後 EPISODE_TAIL 個交易日內沒有新綠燈
+TURN_DROP, MAX_TRANCHES, EPISODE_TAIL = 5.0, 3, 20
+# 重大事件：進場訊號日的「下一個交易日」若有高重要度事件（FOMC／CPI／非農），改在事件當日收盤（公布後）執行
+EVENTS_FILE = Path(__file__).resolve().parent / "data" / "event_calendar.csv"
 # 機會資金動用比例 (綠燈時，依確認分數)
 DEPLOY = {"conf<=0": 0.20, "conf=1": 0.33, "conf>=2": 0.50}
 
@@ -327,6 +333,7 @@ def build_panel(years: int) -> pd.DataFrame:
     df["fg_hot_days"] = hot.groupby((hot != hot.shift()).cumsum()).cumsum() * hot   # F&G ≥ 75 連續天數
     df["light"] = df.apply(classify, axis=1)
     df["conf"] = confirm_score(df)
+    entry_plan(df)
     df = df[df.index >= start_analysis]
     df.index.name = "date"
     return df
@@ -349,6 +356,80 @@ def classify(r) -> str:
     return "NEUTRAL"
 
 
+def load_events() -> pd.DataFrame:
+    if not EVENTS_FILE.exists():
+        return pd.DataFrame(columns=["date", "type", "event", "importance"])
+    e = pd.read_csv(EVENTS_FILE, comment="#", parse_dates=["date"])
+    return e.sort_values("date")
+
+
+def entry_plan(df: pd.DataFrame) -> None:
+    """逐日計算進場狀態（直接寫入 df 欄位）：
+    entry_tranche  當日發出第幾批進場訊號（0 = 無）
+    entry_phase    WAIT（綠燈後等待轉折）／BUY（進場訊號日）／HOLD（已進場，等待再度轉綠創高）／NONE
+    entry_peak     本輪追蹤的分數高點；entry_need = 觸發門檻（高點 − TURN_DROP）
+    """
+    n = len(df)
+    sc, lt = df["panic_score"].values, df["light"].values
+    tranche = np.zeros(n, dtype=int)
+    phase = np.array(["NONE"] * n, dtype=object)
+    peak = np.full(n, np.nan)
+    done = np.zeros(n, dtype=int)
+    active, last_green, k, pk, need_new_green, green_after = False, -999, 0, np.nan, False, False
+    for i in range(n):
+        g = lt[i] == "GREEN"
+        if g:
+            if not active:                                  # 新的一段：第一天先等待
+                active, k, pk, need_new_green, green_after = True, 0, sc[i], False, True
+            last_green = i
+            if need_new_green:                              # 已進場後再度轉綠 → 重新追蹤高點
+                need_new_green, green_after, pk = False, True, sc[i]
+        if active and i - last_green > EPISODE_TAIL:
+            active = False
+        if not active:
+            continue
+        done[i] = k
+        if not np.isnan(sc[i]):
+            pk = sc[i] if np.isnan(pk) else max(pk, sc[i])
+        peak[i] = pk
+        if green_after and k < MAX_TRANCHES and not np.isnan(sc[i]) and sc[i] <= pk - TURN_DROP:
+            k += 1
+            tranche[i] = k
+            done[i] = k
+            phase[i] = "BUY"
+            need_new_green, green_after = True, False
+        elif green_after and k < MAX_TRANCHES:
+            phase[i] = "WAIT"
+        else:
+            phase[i] = "HOLD" if k else "WAIT"
+    df["entry_tranche"] = tranche
+    df["entry_phase"] = phase
+    df["entry_peak"] = peak
+    df["entry_need"] = peak - TURN_DROP
+    df["entry_done"] = done          # 本段已發出的進場批數
+
+
+def event_note(date: pd.Timestamp, cal: pd.DatetimeIndex | None = None) -> str | None:
+    """若進場訊號日之後的下一個交易日有高重要度事件，回傳延後建議。"""
+    ev = load_events()
+    if ev.empty:
+        return None
+    nxt = date + pd.offsets.BDay(1)
+    hit = ev[(ev["date"] > date) & (ev["date"] <= nxt + pd.Timedelta(days=3)) & (ev["importance"] == "高")]
+    hit = hit[hit["date"] <= nxt] if len(hit) else hit
+    if hit.empty:
+        return None
+    e = hit.iloc[0]
+    return f"下一個交易日 {e['date']:%m/%d} 有{e['event']}，建議等公布後於 {e['date']:%m/%d} 收盤前執行"
+
+
+def upcoming_events(start: pd.Timestamp, days: int = 45) -> list[dict]:
+    ev = load_events()
+    ev = ev[(ev["date"] > start) & (ev["date"] <= start + pd.Timedelta(days=days))]
+    return [{"date": f"{r.date:%Y-%m-%d}", "type": r.type, "event": r.event, "importance": r.importance}
+            for r in ev.itertuples()]
+
+
 def confirm_score(df: pd.DataFrame) -> pd.Series:
     inv = (df["inv_days"] >= INV_DAYS_MIN).astype(int)
     vxn = (df["vxn"] >= VXN_HI).astype(int)
@@ -361,10 +442,34 @@ def position_advice(r) -> dict:
     """依燈號 + 確認分數，給出「機會資金」動用比例與加碼／暫停條件 (紀律框架，非投資建議)。"""
     light, conf = r["light"], int(r["conf"]) if pd.notna(r["conf"]) else 0
     notes, adds, pause = [], [], []
-    if light == "GREEN":
-        key = "conf>=2" if conf >= 2 else ("conf=1" if conf == 1 else "conf<=0")
-        deploy = DEPLOY[key]
-        head = f"綠燈・確認分數 {conf:+d} → 先動用機會資金的 {deploy:.0%}"
+    phase, tr = r.get("entry_phase", "NONE"), int(r.get("entry_tranche", 0) or 0)
+    done_n = int(r.get("entry_done", 0) or 0)
+    nxt = done_n + 1
+    pk, need = r.get("entry_peak"), r.get("entry_need")
+    key = "conf>=2" if conf >= 2 else ("conf=1" if conf == 1 else "conf<=0")
+    if phase == "BUY":
+        deploy = DEPLOY[key] if tr == 1 else 1 / 3
+        head = (f"第 {tr} 批進場訊號：綜合分數自高點 {pk:.1f} 回落至 {r['panic_score']:.1f} → "
+                + (f"動用機會資金 {deploy:.0%}（確認分數 {conf:+d}）" if tr == 1 else "再動用機會資金 1/3"))
+        en = event_note(r.name) if hasattr(r, "name") and isinstance(r.name, pd.Timestamp) else None
+        if en:
+            notes.append(en)
+    elif phase == "WAIT" and light == "GREEN":
+        deploy = 0.0
+        head = (f"綠燈・先等待：綜合分數高點 {pk:.1f}，回落至 ≤ {need:.1f} 才發出第 {nxt} 批進場訊號"
+                + (f"（屆時動用機會資金 {DEPLOY[key]:.0%}）" if nxt == 1 else "（屆時再動用機會資金 1/3）")
+                + (f"；本段已於前次轉折發出 {done_n} 批" if done_n else ""))
+        hi = [e for e in upcoming_events(r.name, 30) if e["importance"] == "高"] if isinstance(r.name, pd.Timestamp) else []
+        if hi:
+            pre = [f"{(pd.Timestamp(e['date']) - pd.offsets.BDay(1)):%m/%d}（{e['event']}前一日）" for e in hi]
+            notes.insert(0, "若轉折訊號出現在 " + "、".join(pre) + "，改在事件公布當日收盤執行")
+    elif phase in ("WAIT", "HOLD") and light != "GREEN":
+        deploy = 0.0
+        head = (f"已發出 {done_n} 批進場訊號，等待再度轉綠並創新高後的轉折（第 {nxt} 批）" if phase == "HOLD"
+                else f"綠燈段落追蹤中：分數高點 {pk:.1f}，回落至 ≤ {need:.1f} 為第 1 批")
+    elif light == "GREEN":
+        deploy = 0.0
+        head = "綠燈・先等待分數轉折"
     elif light == "YELLOW":
         deploy, head = 0.0, "黃燈 → 不動用機會資金，等待綠燈"
     elif light in ("RED", "RED2"):
@@ -386,8 +491,8 @@ def position_advice(r) -> dict:
         notes.append(f"高收益債利差 {r['hy']:.2f}%，5 日擴大 {r['hy_5d']:+.2f}：信用面惡化中但尚未出清，短線勝率較低")
     if pd.notna(r.get("rr")) and r["rr"] >= RR_HEADWIND:
         notes.append(f"10 年實質利率 {r['rr']:.2f}% ≥ {RR_HEADWIND}%：估值逆風（回測中不是有效的進出場訊號，僅作背景）")
-    if light in ("GREEN", "YELLOW"):
-        adds = ["VIX÷VIX3M 回到 1 以下（期限結構恢復正常＝恐慌見頂）→ 再動用 1/3",
+    if light in ("GREEN", "YELLOW") or phase in ("WAIT", "HOLD", "BUY"):
+        adds = [f"綠燈後分數自高點回落 ≥ {TURN_DROP:.0f} 分 → 第 1 批；再度轉綠創新高後回落 ≥ {TURN_DROP:.0f} 分 → 下一批（最多 {MAX_TRANCHES} 批）","VIX÷VIX3M 回到 1 以下（期限結構恢復正常＝恐慌見頂）→ 再動用 1/3",
                 f"高收益債利差升破 {HY_CAPIT:.0f}% 後停止擴大（信用恐慌出清）→ 再動用 1/3",
                 "標普 500 自首批進場價再跌 5% → 再動用 1/3"]
         pause = [f"高收益債利差 ≥ {HY_CRISIS_LVL}% 且 5 日擴大 ≥ {HY_CRISIS_5D} → 暫停加碼（2020 年型態：信用急速惡化）"]
@@ -469,6 +574,29 @@ def analyze(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
         rd = df[df["light"].isin(["RED", "RED2"])]
         if len(rd):
             t["紅燈逐年"] = pd.DataFrame({str(y): stats(g) for y, g in rd.groupby(rd.index.year)}).T
+    if "entry_tranche" in df:
+        gr = (df["light"] == "GREEN").astype(int)
+        prev = gr.shift(1).rolling(EPISODE_TAIL, min_periods=1).max().fillna(0)
+        first = df[(gr == 1) & (prev == 0)]
+        t["進場時點比較"] = pd.DataFrame({
+            "全部 (基準)": stats(df),
+            "舊規則：綠燈第一天進場": stats(first),
+            f"新規則：第 1 批（分數自高點回落 ≥{TURN_DROP:.0f}）": stats(df[df["entry_tranche"] == 1]),
+            "新規則：第 2 批": stats(df[df["entry_tranche"] == 2]),
+            "新規則：第 3 批": stats(df[df["entry_tranche"] == 3]),
+            "新規則：全部進場訊號日": stats(df[df["entry_tranche"] > 0]),
+        }).T
+        ev = load_events()
+        fomc = set(ev.loc[ev["type"] == "FOMC", "date"]) if len(ev) else set()
+        isf = df.index.isin(list(fomc))
+        mv = df["spx"].pct_change().abs()
+        rows = {}
+        for lab, m in (("全部交易日", np.ones(len(df), bool)), ("綜合分數 ≥ 60", (df["panic_score"] >= 60).values),
+                       ("綜合分數 ≥ 80", (df["panic_score"] >= 80).values)):
+            a, b = mv[m & isf], mv[m & ~isf]
+            rows[lab] = {"FOMC 決議日天數": int((m & isf).sum()), "FOMC 決議日平均波動": a.mean(),
+                         "一般交易日平均波動": b.mean(), "倍數": a.mean() / b.mean() if b.mean() else np.nan}
+        t["重大事件波動"] = pd.DataFrame(rows).T
     t["燈號回測"] = pd.DataFrame({
         "全部 (基準)": stats(df),
         **{f"{LIGHT_ZH[k]}": stats(df[df["light"] == k]) for k in LIGHT_ZH},
@@ -553,7 +681,7 @@ def analogs(df: pd.DataFrame, n: int = 12) -> pd.DataFrame:
     return out.sort_index(ascending=False)
 
 
-LIGHT_ZH = {"GREEN": "🟢 綠燈 可進場", "YELLOW": "🟡 黃燈 恐慌升溫・等待", "NEUTRAL": "⚪ 灰燈 無訊號",
+LIGHT_ZH = {"GREEN": "🟢 綠燈 準備進場（等待轉折）", "YELLOW": "🟡 黃燈 恐慌升溫・等待", "NEUTRAL": "⚪ 灰燈 無訊號",
             "RED": "🔴 紅燈 過熱・退場警示", "RED2": "🔴 深紅 持續過熱・強烈退場"}
 LIGHT_COLOR = {"GREEN": "#0ca30c", "YELLOW": "#fab219", "NEUTRAL": "#8a8984", "RED": "#d03b3b", "RED2": "#8e1b1b"}
 
@@ -593,21 +721,31 @@ def build_signal(df: pd.DataFrame, tables: dict) -> dict:
         "macro": {k: (None if pd.isna(last.get(k)) else round(float(last[k]), 4))
                   for k in ("vxn", "vix3m", "ts", "inv_days", "hy", "hy_5d", "rr", "rr_20d", "conf")},
         "advice": position_advice(last),
+        "entry": {"phase": last.get("entry_phase"), "tranche": int(last.get("entry_tranche") or 0),
+                  "done": int(last.get("entry_done") or 0),
+                  "peak": None if pd.isna(last.get("entry_peak")) else round(float(last["entry_peak"]), 1),
+                  "need": None if pd.isna(last.get("entry_need")) else round(float(last["entry_need"]), 1),
+                  "recent_buys": [f"{d:%Y-%m-%d}（第 {int(t)} 批）" for d, t in
+                                  df["entry_tranche"].iloc[-126:][df["entry_tranche"].iloc[-126:] > 0].items()]},
+        "events": upcoming_events(df.index[-1]),
     }
 
 
 def notify(sig: dict):
     """燈號轉為綠燈時推播 (設定環境變數 NTFY_TOPIC，iPhone 安裝 ntfy App 訂閱同名 topic)。"""
     topic = os.getenv("NTFY_TOPIC")
-    if not topic or not (sig["light"] in ("GREEN", "RED", "RED2") and sig["changed"]):
+    buy = (sig.get("entry") or {}).get("tranche", 0)
+    if not topic or not (buy or (sig["light"] in ("GREEN", "RED", "RED2") and sig["changed"])):
         return
-    word = {"GREEN": "轉綠燈（可進場）", "RED": "轉紅燈（過熱・退場警示）", "RED2": "轉深紅（持續過熱・強烈退場）"}[sig["light"]]
+    word = (f"第 {buy} 批進場訊號（分數自高點轉折）" if buy else
+            {"GREEN": "轉綠燈（準備進場，等待分數轉折）", "RED": "轉紅燈（過熱・退場警示）",
+             "RED2": "轉深紅（持續過熱・強烈退場）"}[sig["light"]])
     msg = (f"{sig['date']} 訊號{word}\n綜合恐慌分數 {sig['panic_score']}\n"
            f"F&G {sig['fg']}｜VIX {sig['vix']}｜MOVE {sig['move']}\n{(sig.get('advice') or {}).get('headline', '')}")
     try:
         requests.post(f"https://ntfy.sh/{topic}", data=msg.encode(),
-                      headers={"Title": f"Fear-Signal {LIGHT_ZH[sig['light']][2:]}", "Priority": "high",
-                               "Tags": "green_circle" if sig["light"] == "GREEN" else "red_circle"},
+                      headers={"Title": f"Fear-Signal 第 {buy} 批進場" if buy else f"Fear-Signal {LIGHT_ZH[sig['light']][2:]}", "Priority": "high",
+                               "Tags": "moneybag" if buy else ("green_circle" if sig["light"] == "GREEN" else "red_circle")},
                       timeout=15)
         print("已推播通知")
     except Exception as e:  # noqa: BLE001
@@ -719,6 +857,9 @@ def render_html(df: pd.DataFrame, tables: dict, sig: dict, ana: pd.DataFrame, tr
         ("燈號回測（訊號當天買進，分別持有 2 週／1 個月／3 個月）", "燈號回測", LIGHT_ZH.get(L)),
         ("綠燈逐年表現（穩定度檢查）", "綠燈逐年", None),
     ]
+    if "進場時點比較" in tables:
+        sections = [("進場時點：綠燈第一天等待，分數自高點回落 ≥5 才進場", "進場時點比較", None),
+                    ("重大事件：FOMC 決議日的波動放大倍數", "重大事件波動", "__none__")] + sections
     if "過熱訊號拆解" in tables:
         sections += [("新增｜過熱紅燈：哪些過熱情境之後表現轉弱", "過熱訊號拆解",
                       {"RED": "紅燈（以上任一）", "RED2": "　└ 深紅（連續 ≥10 日或 F&G ≥ 85）"}.get(L))]
@@ -760,7 +901,19 @@ def render_html(df: pd.DataFrame, tables: dict, sig: dict, ana: pd.DataFrame, tr
         + (f'<div class="sub"><b>{"減碼步驟" if adv.get("mode") == "exit" else "加碼條件（各再動用 1/3）"}</b><ul>{li(adv["adds"])}</ul></div>' if adv["adds"] else "")
         + (f'<div class="sub"><b>暫停條件</b><ul>{li(adv["pause"])}</ul></div>' if adv["pause"] else "")
         + '<div class="sub">「機會資金」= 目前現金 − 你設定的最低現金水位。比例依過去 10 年綠燈 × 確認分數回測，僅供紀律參考，非投資建議。</div></div>')
-    tbl_html = "".join(f"<h3>{t}</h3>{html_table(tables[k], hl)}" for t, k, hl in sections)
+    def any_table(k, hl):
+        if k == "重大事件波動":
+            t = tables[k]
+            return ('<div class="tw"><table><tr><th>情境</th><th>FOMC 決議日</th><th>決議日平均波動</th><th>一般日平均波動</th><th>倍數</th></tr>'
+                    + "".join(f"<tr><td>{i}</td><td>{int(r['FOMC 決議日天數'])}</td><td>{r['FOMC 決議日平均波動']*100:.2f}%</td>"
+                              f"<td>{r['一般交易日平均波動']*100:.2f}%</td><td><b>{r['倍數']:.2f}×</b></td></tr>" for i, r in t.iterrows())
+                    + "</table></div>")
+        return html_table(tables[k], hl)
+    ev_rows = "".join(f"<tr><td>{e['date'][5:]}</td><td>{'🔴' if e['importance'] == '高' else '⚪'} {e['event']}</td></tr>"
+                      for e in sig.get("events", []))
+    ev_html = (f'<h2>近期重大事件（台灣時間約晚一天）</h2><div class="card"><div class="sub">🔴 高重要度：進場訊號若落在事件前一個交易日，'
+               f'改在事件公布當日收盤執行。</div><div class="tw"><table>{ev_rows}</table></div></div>') if ev_rows else ""
+    tbl_html = "".join(f"<h3>{t}</h3>{any_table(k, hl)}" for t, k, hl in sections)
     return f"""<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>恐慌進場燈號 Fear-Signal</title>
 <style>
@@ -792,6 +945,7 @@ ul{{padding-left:18px}}th.grp{{text-align:center;border-bottom:1px solid var(--i
 <div><small>綜合分數</small><b>{sig['panic_score']:.0f}</b><small>0 貪婪→100 恐慌</small></div></div>
 {macro_html}</div>
 {advice_html}
+{ev_html}
 
 <h2>綜合恐慌分數（近兩年）</h2><div class="card"><div class="tip" id="tip1">輕觸圖表查看數值｜綠帶 ≥80 極度恐慌，紅帶 ≤20 極度貪婪</div>
 {svg_line(tail['panic_score'], lo=0, hi=100)}</div>
