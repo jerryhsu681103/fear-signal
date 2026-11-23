@@ -121,3 +121,13 @@ pip install -r requirements.txt
 python fear_signal.py            # 含 PDF（需安裝 Google Chrome 與中文字型）
 python fear_signal.py --no-pdf   # 只更新燈號與資料庫
 ```
+
+## 控制台成品自動更新
+`artifact/` 是 claude.ai 控制台成品的產生器（`build_artifact.py`、`panel.html`、`panel.js`、`update_history.py`）。
+排程任務每個交易日台北 08:07（GitHub Actions 06:37 更新資料之後）執行：
+
+```bash
+pip install -r requirements.txt
+python artifact/build_artifact.py artifact/site   # 產出 index.html、history.json、files/、pkg/
+```
+再把 `artifact/site/` 發佈到控制台成品（patch 模式，只更新有變動的檔案）。

@@ -2,3 +2,4 @@ __pycache__/
 reports/*.html
 # PDF 封存資料庫較大（約 18 MB），每天自動更新時不提交；PDF 本身已存在 reports/ 與 docs/
 data/report_archive.db
+artifact/site/

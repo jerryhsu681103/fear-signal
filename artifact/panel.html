@@ -1,0 +1,99 @@
+<style>
+.fs-in{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.fs-in label{font-size:12px;color:var(--ink2);display:flex;flex-direction:column;gap:3px}
+.fs-in input{font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--grid);border-radius:9px;background:var(--bg);color:var(--ink);width:100%}
+.fs-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.fs-btn{font:inherit;font-weight:600;padding:10px 14px;border-radius:10px;border:1px solid var(--grid);background:var(--bg);color:var(--ink);cursor:pointer}
+.fs-btn.pri{background:#2a78d6;border-color:#2a78d6;color:#fff}
+.fs-btn:disabled{opacity:.5}
+.fs-msg{font-size:13px;color:var(--ink2);margin-top:8px;min-height:18px}
+.fs-lamp{width:64px;height:64px;border-radius:50%;flex:none;background:#8a8984}
+.fs-ent td button{font:inherit;font-size:12px;border:1px solid var(--grid);background:none;color:var(--ink2);border-radius:6px;padding:2px 8px}
+.fs-sec{margin-top:6px}
+details summary{cursor:pointer;font-weight:600;padding:4px 0}
+</style>
+<h1>恐慌進場燈號 控制台</h1>
+<div class="sub" id="fs-asof">載入中…</div>
+
+<div class="card">
+  <div class="light"><div class="fs-lamp" id="fs-lamp" role="img" aria-label="燈號"></div><div>
+    <div class="big" id="fs-light">—</div>
+    <div class="sub" id="fs-detail"></div>
+    <div class="sub" id="fs-need"></div>
+  </div></div>
+  <div class="kpi" id="fs-kpi"></div>
+  <div id="fs-macro"></div>
+  <div class="sub" style="margin-top:10px">歷史同燈號後的平均報酬（上漲機率）：</div>
+  <div class="tw"><table class="mini" id="fs-hist"></table></div>
+</div>
+
+<h2>輸入日期，自動讀取並計算訊號</h2>
+<div class="card">
+  <div class="fs-in" style="grid-template-columns:1fr auto;align-items:end">
+    <label>查詢日期<input type="date" id="q-date"></label>
+    <button class="fs-btn pri" id="btn-q" style="height:42px">讀取並計算</button>
+  </div>
+  <div class="fs-msg" id="q-msg"></div>
+  <div id="q-out"></div>
+  <div class="fs-msg" id="q-fresh"></div>
+  <details class="fs-sec" id="man-box"><summary>資料尚未更新時：手動輸入</summary>
+  <div class="fs-in" style="margin-top:8px">
+    <label>日期<input type="date" id="in-date"></label>
+    <label>恐懼貪婪指數 F&amp;G<input type="number" step="0.1" inputmode="decimal" id="in-fg" placeholder="例如 9.7"></label>
+    <label>VIX<input type="number" step="0.01" inputmode="decimal" id="in-vix" placeholder="例如 35.89"></label>
+    <label>MOVE（空白＝沿用前值）<input type="number" step="0.01" inputmode="decimal" id="in-move"></label>
+    <label>S&amp;P 500 收盤（選填）<input type="number" step="0.01" inputmode="decimal" id="in-spx"></label>
+    <label>納指100 收盤（選填）<input type="number" step="0.01" inputmode="decimal" id="in-ndx"></label>
+    <label>費城半導體 收盤（選填）<input type="number" step="0.01" inputmode="decimal" id="in-sox"></label>
+    <label>VXN（選填）<input type="number" step="0.01" inputmode="decimal" id="in-vxn"></label>
+    <label>VIX3M（選填）<input type="number" step="0.01" inputmode="decimal" id="in-vix3m"></label>
+    <label>高收益債利差 %（選填）<input type="number" step="0.01" inputmode="decimal" id="in-hy"></label>
+    <label>10 年實質利率 %（選填）<input type="number" step="0.01" inputmode="decimal" id="in-rr"></label>
+  </div>
+  <div class="fs-btns">
+    <button class="fs-btn" id="btn-calc">試算燈號</button>
+    <button class="fs-btn pri" id="btn-save">計算並儲存</button>
+  </div>
+  <div class="fs-msg" id="fs-msg">同一日期以手動輸入為準；自動資料到位後可在下方刪除手動值。</div>
+  <div class="sub" style="margin-top:6px">已儲存的手動更新（<span id="ent-n">0</span> 筆）</div>
+  <div class="tw"><table class="fs-ent" id="fs-ent"></table></div>
+  </details>
+</div>
+
+<h2>近期重大事件</h2>
+<div class="card"><div class="sub">🔴 高重要度（FOMC／CPI／非農）：進場訊號若落在事件前一個交易日，改在事件公布當日收盤執行。</div>
+<div class="tw"><table id="fs-events"></table></div></div>
+
+<h2>近期訊號追蹤（含手動更新）</h2>
+<div class="sub">「一次買」= 首次綠燈日買進至最新收盤；「分批」= 該段每個綠燈日各買一份的平均成本至最新收盤。</div>
+<div class="tw"><table id="fs-trk"></table></div>
+
+<h2>綜合分數 vs 三大指數（2025–2026）</h2>
+<div class="card"><img src="files/score_overview.png" alt="綜合恐慌分數與 S&amp;P 500、納指100、費城半導體指數化走勢" style="width:100%;height:auto"></div>
+<h2>下載程式與報告</h2>
+<div class="card">
+  <div class="fs-btns" style="margin-top:0">
+    <button class="fs-btn pri" id="btn-daily" data-date="__DAILY_DATE__">當日報告 PDF（資料日 __DAILY_DATE__）</button>
+    <button class="fs-btn pri" id="btn-zip">下載程式包 fear-signal.zip</button>
+    <button class="fs-btn" id="btn-pdf">10 年完整報告 PDF</button>
+    <button class="fs-btn" id="btn-charts">分數 vs 三大指數 線圖 PDF</button>
+    <button class="fs-btn" id="btn-ytd26">2026 每日燈號回測 PDF</button>
+    <button class="fs-btn" id="btn-ytd25">2025 每日燈號回測 PDF</button>
+    <span style="display:inline-flex;gap:6px;align-items:center"><select id="sel-year" class="fs-btn" style="padding:9px 8px">
+      <option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option>
+      <option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option></select>
+      <button class="fs-btn" id="btn-year">下載年度報告 PDF</button></span>
+    <button class="fs-btn" id="btn-csv">匯出含手動更新的資料 CSV</button>
+  </div>
+  <div class="fs-msg" id="dl-msg"></div>
+  <details class="fs-sec" open><summary>GitHub 每日自動更新（已部署）</summary>
+    <ul class="sub" style="padding-left:18px">
+      <li>Repo：<a href="https://github.com/jerryhsu681103/fear-signal">github.com/jerryhsu681103/fear-signal</a></li>
+      <li>每個美股交易日收盤後自動執行（台北時間 週二～週六 06:37）：更新資料庫、燈號網頁、10 年報告、線圖與逐日回測；綠燈／紅燈時推播。</li>
+      <li>每天提交資料庫與網頁；PDF 報告與今年度獨立報告於週五（或手動執行時）提交。</li>
+      <li>立即更新：GitHub → Actions → daily-fear-signal → Run workflow。</li>
+      <li>燈號網頁：<a href="https://jerryhsu681103.github.io/fear-signal/">jerryhsu681103.github.io/fear-signal</a>（需在 Settings → Pages 選 main／docs）。</li>
+      <li>本控制台每個交易日 台北 08:07（週二～週六）由排程任務自動重建並發佈：取用 GitHub 當天更新的資料庫、燈號與當日報告。若某天未更新，可在對話中說「更新控制台資料」手動補上。</li>
+    </ul>
+  </details>
+</div>
