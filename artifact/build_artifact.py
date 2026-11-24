@@ -36,6 +36,25 @@ sig = json.loads((SRC / "data/signal.json").read_text(encoding="utf-8"))
 import update_history
 update_history.main(str(OUT / "history.json"), str(SRC / "data/seed_macro.csv"), str(SRC / "data/manual_overrides.csv"))
 
+# 鏡像資料常落後 1–3 天：近 60 個交易日的指標改用程式資料庫 data/daily.csv（官方來源＋手動補值）的值，
+# 讓控制台上方的即時計算與下方「資料庫報告」一致。指數價格（ndx 為 QQQ 代理）與回測統計不動。
+H = json.loads((OUT / "history.json").read_text(encoding="utf-8"))
+COLS = {"fg": 1, "vix": 2, "move": 3, "vxn": 7, "vix3m": 8, "hy": 9, "rr": 10, "hy_5d": 11}
+known = {r[0] for r in H["rows"]}
+for d, r in df[df.index >= df.index[-60]].iterrows():
+    ds = d.strftime("%Y-%m-%d")
+    if ds not in known:
+        continue
+    row = next(x for x in H["rows"] if x[0] == ds)
+    for k, i in COLS.items():
+        v = nz(r.get(k))
+        if v is not None:
+            row[i] = v
+for k, v in (sig.get("data_dates") or {}).items():
+    if k in H.get("data_dates", {}) and v > H["data_dates"][k]:
+        H["data_dates"][k] = v
+(OUT / "history.json").write_text(json.dumps(H, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
 # ---------- program zip (code + database) and PDF
 PKG = {"fear_signal.py": "fear_signal.py", "build_pdf_report.py": "build_pdf_report.py",
        "requirements.txt": "requirements.txt", "README.md": "README.md",
