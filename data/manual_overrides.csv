@@ -2,3 +2,4 @@
 # series 可填 fg / vix / move / vxn / vix3m / hy / rr；同一日期以此檔為準。不需要時保持只有標題列即可。
 date,series,value
 2026-11-23,vix,26.62
+2026-11-24,vix,26.36
