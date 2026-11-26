@@ -1,6 +1,6 @@
 {
   "date": "2026-11-25",
-  "generated_at": "2026-11-26 00:15 UTC",
+  "generated_at": "2026-11-26 04:26 UTC",
   "light": "GREEN",
   "light_zh": "🟢 綠燈 準備進場（等待轉折）",
   "changed": false,
@@ -75,7 +75,7 @@
     "ndx": "Yahoo ^NDX",
     "sox": "Yahoo ^SOX",
     "fg": "GitHub 鏡像",
-    "vix": "CBOE 官方 + 手動補值 1 筆",
+    "vix": "CBOE 官方",
     "move": "Yahoo ^MOVE",
     "vxn": "Yahoo ^VXN + 歷史種子",
     "vix3m": "Yahoo ^VIX3M + 歷史種子",
@@ -89,18 +89,17 @@
     "fg": "2026-11-24",
     "vix": "2026-11-25",
     "move": "2026-11-25",
-    "vxn": "2026-11-24",
+    "vxn": "2026-11-25",
     "vix3m": "2026-11-25",
     "hy": "2026-11-24",
     "rr": "2026-11-25"
   },
   "stale": [
     "fg",
-    "vxn",
     "hy"
   ],
   "macro": {
-    "vxn": 36.42,
+    "vxn": 38.53,
     "vix3m": 26.29,
     "ts": 1.0761,
     "inv_days": 7.0,
