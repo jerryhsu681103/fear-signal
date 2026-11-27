@@ -1,17 +1,17 @@
 {
   "date": "2026-11-25",
-  "generated_at": "2026-11-26 04:26 UTC",
+  "generated_at": "2026-11-27 04:31 UTC",
   "light": "GREEN",
   "light_zh": "🟢 綠燈 準備進場（等待轉折）",
   "changed": false,
   "prev_light": "GREEN",
-  "fg": 17.4,
+  "fg": 15.2,
   "vix": 28.29,
   "move": 97.54,
-  "fear_fg": 93.8,
+  "fear_fg": 95.6,
   "fear_vix": 98.0,
   "fear_move": 83.7,
-  "panic_score": 91.8,
+  "panic_score": 92.4,
   "hist_when_same_light": {
     "天數": 221.0,
     "事件數": 23.0,
@@ -86,7 +86,7 @@
     "spx": "2026-11-25",
     "ndx": "2026-11-25",
     "sox": "2026-11-25",
-    "fg": "2026-11-24",
+    "fg": "2026-11-25",
     "vix": "2026-11-25",
     "move": "2026-11-25",
     "vxn": "2026-11-25",
@@ -95,7 +95,6 @@
     "rr": "2026-11-25"
   },
   "stale": [
-    "fg",
     "hy"
   ],
   "macro": {
