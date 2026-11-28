@@ -1,6 +1,6 @@
 {
   "date": "2026-11-27",
-  "generated_at": "2026-11-28 00:17 UTC",
+  "generated_at": "2026-11-28 04:11 UTC",
   "light": "YELLOW",
   "light_zh": "🟡 黃燈 恐慌升溫・等待",
   "changed": true,
@@ -10,7 +10,7 @@
   "move": 95.3,
   "fear_fg": 95.8,
   "fear_vix": 88.4,
-  "fear_move": 80.9,
+  "fear_move": 81.1,
   "panic_score": 88.4,
   "hist_when_same_light": {
     "天數": 722.0,
@@ -75,7 +75,7 @@
     "ndx": "Yahoo ^NDX",
     "sox": "Yahoo ^SOX",
     "fg": "GitHub 鏡像",
-    "vix": "CBOE 官方 + 手動補值 1 筆",
+    "vix": "CBOE 官方",
     "move": "Yahoo ^MOVE",
     "vxn": "Yahoo ^VXN + 歷史種子",
     "vix3m": "Yahoo ^VIX3M + 歷史種子",
@@ -89,18 +89,17 @@
     "fg": "2026-11-26",
     "vix": "2026-11-27",
     "move": "2026-11-27",
-    "vxn": "2026-11-25",
+    "vxn": "2026-11-27",
     "vix3m": "2026-11-27",
     "hy": "2026-11-26",
     "rr": "2026-11-27"
   },
   "stale": [
     "fg",
-    "vxn",
     "hy"
   ],
   "macro": {
-    "vxn": 38.53,
+    "vxn": 33.34,
     "vix3m": 23.82,
     "ts": 0.9996,
     "inv_days": 0.0,
